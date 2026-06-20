@@ -1,0 +1,44 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "agent": {
+    "review": {
+      "mode": "subagent",
+      "description": "Reviews code for bugs, style issues, and security problems",
+      "permission": { "edit": "deny", "bash": "deny", "read": "allow", "glob": "allow", "grep": "allow" },
+      "prompt": "أنت مدقق كود محترف. ركز على: الأخطاء المنطقية، الثغرات الأمنية، مشاكل الأداء، ومخالفات أسلوب الكود. كن موجزاً ومحدداً."
+    },
+    "accounting": {
+      "mode": "subagent",
+      "description": "Expert in accounting systems and car rental management software",
+      "permission": { "edit": "deny", "bash": "allow", "read": "allow", "glob": "allow", "grep": "allow" },
+      "prompt": "أنت خبير في أنظمة المحاسبة وإدارة شركات كراء السيارات. تساعد في تصميم قواعد البيانات، التقارير المالية، ومنطق الأعمال للعقود، المدفوعات، تتبع السيارات، وإدارة العملاء."
+    },
+    "translate": {
+      "mode": "subagent",
+      "description": "Translates between Arabic, English, and French",
+      "permission": { "edit": "deny", "bash": "deny", "read": "allow" },
+      "prompt": "أنت مترجم محترف بين العربية والإنجليزية والفرنسية. ترجم بدقة مع الحفاظ على المصطلحات التقنية. قدم الترجمة فقط بدون شرح."
+    }
+  },
+
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": true
+    }
+  },
+
+  "references": {
+    "firebase": {
+      "repository": "firebase/firebase-js-sdk",
+      "description": "Use for Firebase JavaScript SDK reference and examples"
+    },
+    "nextjs": {
+      "repository": "vercel/next.js",
+      "branch": "canary",
+      "description": "Use for Next.js framework API reference"
+    }
+  }
+}
