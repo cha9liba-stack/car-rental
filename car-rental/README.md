@@ -160,3 +160,9 @@ This system is designed for **car rental agencies in Tunisia and North Africa**,
 ## License
 
 MIT - See LICENSE file
+
+## Live Demo
+
+?? **Demo URL:** [https://car-rental-zeta-swart.vercel.app](https://car-rental-zeta-swart.vercel.app)
+
+> Login as guest (anonymous) to explore the dashboard. Visit \/seed\ to populate demo data.
