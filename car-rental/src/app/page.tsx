@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/components/layout/language-provider";
 import { motion } from "framer-motion";
 import {
   Car,
@@ -11,7 +12,8 @@ import {
   DollarSign,
   CalendarDays,
   ArrowUpRight,
-  ArrowDownRight,
+  Shield,
+  Wrench,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +30,14 @@ import { Car as CarType, Contract, Client } from "@/lib/types";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import Link from "next/link";
 
+interface Alert {
+  type: "insurance" | "inspection" | "overdue";
+  message: string;
+  carName: string;
+  carId: string;
+  date: string;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState({
     activeContracts: 0,
@@ -39,7 +49,9 @@ export default function Dashboard() {
     clientsCount: 0,
   });
   const [recentContracts, setRecentContracts] = useState<Contract[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t, lang } = useLang();
 
   useEffect(() => {
     const startOfMonth = new Date();
@@ -70,11 +82,62 @@ export default function Dashboard() {
         let total = 0;
         let available = 0;
         let maintenance = 0;
+        const now = new Date();
+        const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const newAlerts: Alert[] = [];
+
         snapshot.forEach((doc) => {
           total++;
-          const status = doc.data().status;
+          const data = doc.data();
+          const status = data.status;
           if (status === "available") available++;
           if (status === "maintenance") maintenance++;
+
+          const carName = `${data.brand || ""} ${data.model || ""} (${data.plateNumber || ""})`;
+
+          if (data.insuranceExpiryDate) {
+            const expiry = new Date(data.insuranceExpiryDate);
+            if (expiry <= thirtyDays && expiry >= now) {
+              newAlerts.push({
+                type: "insurance",
+                message: t("insurance_expiring"),
+                carName,
+                carId: doc.id,
+                date: data.insuranceExpiryDate,
+              });
+            }
+            if (expiry < now) {
+              newAlerts.push({
+                type: "insurance",
+                message: t("insurance_expired"),
+                carName,
+                carId: doc.id,
+                date: data.insuranceExpiryDate,
+              });
+            }
+          }
+
+          if (data.technicalInspectionDate) {
+            const inspection = new Date(data.technicalInspectionDate);
+            if (inspection <= thirtyDays && inspection >= now) {
+              newAlerts.push({
+                type: "inspection",
+                message: t("inspection_expiring"),
+                carName,
+                carId: doc.id,
+                date: data.technicalInspectionDate,
+              });
+            }
+            if (inspection < now) {
+              newAlerts.push({
+                type: "inspection",
+                message: t("inspection_expired"),
+                carName,
+                carId: doc.id,
+                date: data.technicalInspectionDate,
+              });
+            }
+          }
         });
         setStats((s) => ({
           ...s,
@@ -82,6 +145,10 @@ export default function Dashboard() {
           availableCars: available,
           carsInMaintenance: maintenance,
         }));
+        setAlerts((prev) => {
+          const nonOverdue = prev.filter((a) => a.type === "overdue");
+          return [...nonOverdue, ...newAlerts];
+        });
       }),
       onSnapshot(collection(db, "clients"), (snapshot) => {
         setStats((s) => ({ ...s, clientsCount: snapshot.size }));
@@ -99,6 +166,24 @@ export default function Dashboard() {
       );
       setRecentContracts(contracts);
       setLoading(false);
+
+      const overdueAlerts: Alert[] = [];
+      const now = new Date();
+      contracts.forEach((c) => {
+        if (c.status === "active" && new Date(c.endDate) < now) {
+          overdueAlerts.push({
+            type: "overdue",
+            message: t("contract_overdue"),
+            carName: c.carName || "",
+            carId: c.carId || "",
+            date: c.endDate,
+          });
+        }
+      });
+      setAlerts((prev) => {
+        const nonOverdue = prev.filter((a) => a.type !== "overdue");
+        return [...nonOverdue, ...overdueAlerts];
+      });
     });
 
     return () => {
@@ -110,15 +195,15 @@ export default function Dashboard() {
   const contractColumns = [
     {
       key: "clientName",
-      header: "Client",
+      header: t("client"),
     },
     {
       key: "carName",
-      header: "Véhicule",
+      header: t("vehicle"),
     },
     {
       key: "totalAmount",
-      header: "Montant",
+      header: t("amount"),
       render: (c: Contract) => (
         <span className="font-semibold text-gray-900 dark:text-white">
           {formatCurrency(c.totalAmount)}
@@ -127,12 +212,12 @@ export default function Dashboard() {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("status"),
       render: (c: Contract) => <Badge status={c.status} />,
     },
     {
       key: "createdAt",
-      header: "Date",
+      header: t("date"),
       render: (c: Contract) => (
         <span className="text-sm text-gray-500 dark:text-gray-400">
           {formatDateShort(c.createdAt)}
@@ -150,15 +235,15 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Tableau de bord
+            {t("dashboard_title")}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Aperçu de l&apos;activité de l&apos;agence
+            {t("dashboard_desc")}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <CalendarDays size={14} />
-          {new Date().toLocaleDateString("fr-FR", {
+          {new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "ar-SA", {
             weekday: "long",
             day: "numeric",
             month: "long",
@@ -169,28 +254,28 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatCard
-          title="Contrats actifs"
+          title={t("active_contracts")}
           value={String(stats.activeContracts)}
           icon={<FileText size={20} />}
           color="blue"
-          trend={stats.activeContracts > 0 ? { value: "actifs", positive: true } : undefined}
+          trend={stats.activeContracts > 0 ? { value: t("active"), positive: true } : undefined}
         />
         <StatCard
-          title="Véhicules disponibles"
+          title={t("available_cars")}
           value={`${stats.availableCars}/${stats.totalCars}`}
           icon={<Car size={20} />}
           color="green"
-          subtitle={`${stats.carsInMaintenance} en maintenance`}
+          subtitle={`${stats.carsInMaintenance} ${t("in_maintenance")}`}
         />
         <StatCard
-          title="Revenus du mois"
+          title={t("monthly_revenue")}
           value={formatCurrency(stats.monthlyRevenue)}
           icon={<DollarSign size={20} />}
           color="amber"
-          trend={stats.monthlyRevenue > 0 ? { value: "ce mois", positive: true } : undefined}
+          trend={stats.monthlyRevenue > 0 ? { value: t("this_month"), positive: true } : undefined}
         />
         <StatCard
-          title="Total clients"
+          title={t("total_clients")}
           value={String(stats.clientsCount)}
           icon={<Users size={20} />}
           color="purple"
@@ -201,12 +286,12 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Derniers contrats</CardTitle>
+              <CardTitle>{t("recent_contracts")}</CardTitle>
               <Link
                 href="/contracts"
                 className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium flex items-center gap-1"
               >
-                Voir tout
+                {t("view_all")}
                 <ArrowUpRight size={14} />
               </Link>
             </CardHeader>
@@ -223,7 +308,7 @@ export default function Dashboard() {
               <Table
                 columns={contractColumns}
                 data={recentContracts}
-                emptyMessage="Aucun contrat pour le moment"
+                emptyMessage={t("no_contracts")}
               />
             )}
           </Card>
@@ -232,7 +317,7 @@ export default function Dashboard() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle>Actions rapides</CardTitle>
+              <CardTitle>{t("quick_actions")}</CardTitle>
             </CardHeader>
             <div className="space-y-3">
               <Link
@@ -240,40 +325,81 @@ export default function Dashboard() {
                 className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all"
               >
                 <Users size={18} />
-                <span className="text-sm font-medium">Gérer les clients</span>
+                <span className="text-sm font-medium">{t("manage_clients")}</span>
               </Link>
               <Link
                 href="/cars"
                 className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all"
               >
                 <Car size={18} />
-                <span className="text-sm font-medium">Gérer les véhicules</span>
+                <span className="text-sm font-medium">{t("manage_cars")}</span>
               </Link>
               <Link
                 href="/contracts"
                 className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
               >
                 <FileText size={18} />
-                <span className="text-sm font-medium">Nouveau contrat</span>
+                <span className="text-sm font-medium">{t("new_contract")}</span>
               </Link>
               <Link
                 href="/payments"
                 className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all"
               >
                 <DollarSign size={18} />
-                <span className="text-sm font-medium">Enregistrer un paiement</span>
+                <span className="text-sm font-medium">{t("add_payment")}</span>
+              </Link>
+              <Link
+                href="/maintenance"
+                className="flex items-center gap-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all"
+              >
+                <Wrench size={18} />
+                <span className="text-sm font-medium">{t("maintenance")}</span>
               </Link>
             </div>
           </Card>
 
           <Card className="mt-5">
             <CardHeader>
-              <CardTitle>Alertes</CardTitle>
+              <CardTitle>{t("alerts")}</CardTitle>
+              {alerts.length > 0 && (
+                <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">
+                  {alerts.length}
+                </span>
+              )}
             </CardHeader>
-            <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
-              <AlertCircle size={32} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              Aucune alerte pour le moment
-            </div>
+            {alerts.length === 0 ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                <AlertCircle size={32} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                {t("no_alerts")}
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-thin">
+                {alerts.map((alert, i) => (
+                  <Link
+                    key={i}
+                    href={`/cars/${alert.carId}`}
+                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-all group"
+                  >
+                    <div className={`p-1.5 rounded-lg ${
+                      alert.type === "insurance"
+                        ? "bg-red-50 dark:bg-red-900/20 text-red-500"
+                        : alert.type === "inspection"
+                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-500"
+                        : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
+                    }`}>
+                      {alert.type === "overdue" ? <AlertCircle size={14} /> : <Shield size={14} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                        {alert.message}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{alert.carName}</p>
+                      <p className="text-xs text-gray-400">{formatDateShort(alert.date)}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>

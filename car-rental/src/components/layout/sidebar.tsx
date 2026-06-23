@@ -14,32 +14,54 @@ import {
   Menu,
   Moon,
   Sun,
+  Wrench,
+  History,
+  Receipt,
+  LayoutGrid,
+  Star,
+  LogOut,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "./theme-provider";
+import { useAuth } from "./auth-context";
+import { useLang } from "./language-provider";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Tableau de bord", href: "/" },
-  { icon: Users, label: "Clients", href: "/clients" },
-  { icon: Car, label: "Véhicules", href: "/cars" },
-  { icon: FileText, label: "Contrats", href: "/contracts" },
-  { icon: CreditCard, label: "Paiements", href: "/payments" },
-  { icon: BarChart3, label: "Rapports", href: "/reports" },
-  { icon: Settings, label: "Paramètres", href: "/settings" },
-];
+type MenuItem = { icon: any; labelKey: string; href: string };
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { theme, toggle } = useTheme();
+  const { logout } = useAuth();
+  const { lang, setLang, t } = useLang();
+
+  const flexDir = lang === "fr" ? "flex-row-reverse" : "";
+
+  const menuItems: MenuItem[] = [
+    { icon: LayoutDashboard, labelKey: "dashboard", href: "/" },
+    { icon: Users, labelKey: "clients", href: "/clients" },
+    { icon: Car, labelKey: "cars", href: "/cars" },
+    { icon: FileText, labelKey: "contracts", href: "/contracts" },
+    { icon: CreditCard, labelKey: "payments", href: "/payments" },
+    { icon: Wrench, labelKey: "maintenance", href: "/maintenance" },
+    { icon: History, labelKey: "activity_log", href: "/activity-log" },
+    { icon: Receipt, labelKey: "expenses", href: "/expenses" },
+    { icon: LayoutGrid, labelKey: "fleet", href: "/fleet" },
+    { icon: Star, labelKey: "loyalty", href: "/loyalty" },
+    { icon: BarChart3, labelKey: "reports", href: "/reports" },
+    { icon: Settings, labelKey: "settings", href: "/settings" },
+  ];
+
+  if (pathname === "/login") return null;
 
   return (
     <>
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 glass-strong rounded-xl"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2.5 glass-strong rounded-xl"
       >
         <Menu size={20} className="text-gray-700 dark:text-gray-300" />
       </button>
@@ -48,8 +70,9 @@ export default function Sidebar() {
         animate={{ width: collapsed ? 80 : 270 }}
         transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
         className={cn(
-          "fixed left-0 top-0 h-full z-40",
-          "hidden lg:flex flex-col glass-strong border-r border-white/20 dark:border-white/5"
+          "fixed top-0 h-full z-40",
+          lang === "ar" ? "right-0 border-l" : "left-0 border-r",
+          "hidden lg:flex flex-col glass-strong border-white/20 dark:border-white/5"
         )}
       >
         <div className="flex items-center justify-between p-5 border-b border-white/10">
@@ -65,7 +88,7 @@ export default function Sidebar() {
                 AutoRent
               </span>
               <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-medium tracking-wider uppercase">
-                Gestion Location
+                {t('appSubtitle')}
               </span>
             </div>
           </motion.div>
@@ -89,11 +112,12 @@ export default function Sidebar() {
             return (
               <Link key={item.href} href={item.href}>
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                    flexDir,
                     isActive
                       ? "bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 dark:text-indigo-400 font-medium shadow-sm"
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5"
@@ -107,7 +131,7 @@ export default function Sidebar() {
                     }}
                     className="whitespace-nowrap overflow-hidden text-sm"
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </motion.span>
                 </motion.div>
               </Link>
@@ -120,6 +144,7 @@ export default function Sidebar() {
             onClick={toggle}
             className={cn(
               "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm",
+              flexDir,
               "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5"
             )}
           >
@@ -131,7 +156,45 @@ export default function Sidebar() {
               }}
               className="whitespace-nowrap overflow-hidden"
             >
-              {theme === "dark" ? "Mode clair" : "Mode sombre"}
+              {t(theme === "dark" ? "light_mode" : "dark_mode")}
+            </motion.span>
+          </button>
+          <button
+            onClick={() => setLang(lang === "ar" ? "fr" : "ar")}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm",
+              flexDir,
+              "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5"
+            )}
+          >
+            <Globe size={18} />
+            <motion.span
+              animate={{
+                opacity: collapsed ? 0 : 1,
+                width: collapsed ? 0 : "auto",
+              }}
+              className="whitespace-nowrap overflow-hidden"
+            >
+              {lang === "ar" ? t("french") : t("arabic")}
+            </motion.span>
+          </button>
+          <button
+            onClick={logout}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm",
+              flexDir,
+              "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-white/50 dark:hover:bg-white/5"
+            )}
+          >
+            <LogOut size={18} />
+            <motion.span
+              animate={{
+                opacity: collapsed ? 0 : 1,
+                width: collapsed ? 0 : "auto",
+              }}
+              className="whitespace-nowrap overflow-hidden"
+            >
+              {t('logout')}
             </motion.span>
           </button>
           <motion.div

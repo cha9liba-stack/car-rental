@@ -51,7 +51,7 @@ export function Table<T extends { id: string }>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider",
+                    "px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider",
                     col.className
                   )}
                 >

@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { AuthProvider } from "@/components/layout/auth-context";
+import { LanguageProvider } from "@/components/layout/language-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gestion de Location de Voitures",
-  description: "Système professionnel de gestion d'agence de location de voitures",
+  title: "نظام إدارة كراء السيارات",
+  description: "نظام احترافي لإدارة وكالة كراء السيارات",
 };
 
 export default function RootLayout({
@@ -25,14 +27,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
+      <html
+        lang="ar"
+        dir="rtl"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        suppressHydrationWarning
+      >
       <body className="min-h-full">
         <ThemeProvider>
-          <DashboardLayout>{children}</DashboardLayout>
+          <LanguageProvider>
+            <AuthProvider>
+              <DashboardLayout>{children}</DashboardLayout>
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

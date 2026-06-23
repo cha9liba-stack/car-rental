@@ -28,7 +28,7 @@
 
 * {
   box-sizing: border-box;
-  direction: ltr;
+  direction: rtl;
 }
 
 body {

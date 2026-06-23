@@ -1,0 +1,33 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e9] [cursor=pointer]:
+    - img [ref=e10]
+  - alert [ref=e13]
+  - generic [ref=e14]:
+    - main [ref=e15]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - img [ref=e21]
+          - heading "نظام إدارة كراء السيارات" [level=1] [ref=e25]
+          - paragraph [ref=e26]: تسجيل الدخول إلى لوحة التحكم
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]: البريد الإلكتروني
+            - textbox "admin@example.com" [ref=e30]
+          - generic [ref=e31]:
+            - generic [ref=e32]: كلمة المرور
+            - generic [ref=e33]:
+              - textbox "••••••••" [ref=e34]
+              - button [ref=e35]:
+                - img [ref=e36]
+          - button "تسجيل الدخول" [ref=e39]:
+            - img [ref=e40]
+            - text: تسجيل الدخول
+          - generic [ref=e47]: أو
+          - button "دخول كزائر (بدون حساب)" [ref=e48]:
+            - img [ref=e49]
+            - text: دخول كزائر (بدون حساب)
+          - paragraph [ref=e53]:
+            - text: ليس لديك حساب؟
+            - link "إنشاء حساب جديد" [ref=e54] [cursor=pointer]:
+              - /url: /register
+    - region "Notifications alt+T"

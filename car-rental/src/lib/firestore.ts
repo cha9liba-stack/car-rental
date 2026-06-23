@@ -22,6 +22,9 @@ const collections = {
   contracts: "contracts",
   payments: "payments",
   maintenance: "maintenance",
+  auditLogs: "auditLogs",
+  expenses: "expenses",
+  clientPoints: "clientPoints",
 };
 
 export async function addToCollection<T extends DocumentData>(

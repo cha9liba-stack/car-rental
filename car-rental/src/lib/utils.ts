@@ -5,15 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function getLang(): string {
+  if (typeof window === "undefined") return "ar";
+  return localStorage.getItem("lang") || "ar";
+}
+
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("fr-FR", {
+  const lang = getLang();
+  const fmt = new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
-  }).format(amount) + " DT";
+  }).format(amount);
+  return lang === "fr" ? `${fmt} DT` : `${fmt} د.ت`;
 }
 
 export function formatDate(date: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  const locale = getLang() === "fr" ? "fr-FR" : "ar-TN";
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -21,7 +29,8 @@ export function formatDate(date: string): string {
 }
 
 export function formatDateShort(date: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  const locale = getLang() === "fr" ? "fr-FR" : "ar-TN";
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -58,17 +67,33 @@ export function getStatusColor(status: string): string {
 }
 
 export function getStatusLabel(status: string): string {
+  const lang = getLang();
+  if (lang === "fr") {
+    const labels: Record<string, string> = {
+      available: "Disponible",
+      rented: "Louée",
+      maintenance: "Maintenance",
+      retired: "Retirée",
+      active: "Actif",
+      completed: "Terminé",
+      cancelled: "Annulé",
+      paid: "Payé",
+      pending: "En attente",
+      overdue: "En retard",
+    };
+    return labels[status] || status;
+  }
   const labels: Record<string, string> = {
-    available: "Disponible",
-    rented: "Louée",
-    maintenance: "Maintenance",
-    retired: "Retirée",
-    active: "Active",
-    completed: "Terminé",
-    cancelled: "Annulé",
-    paid: "Payé",
-    pending: "En attente",
-    overdue: "En retard",
+    available: "متاحة",
+    rented: "مؤجرة",
+    maintenance: "صيانة",
+    retired: "متقاعدة",
+    active: "نشط",
+    completed: "منتهي",
+    cancelled: "ملغي",
+    paid: "مدفوع",
+    pending: "قيد الانتظار",
+    overdue: "متأخر",
   };
   return labels[status] || status;
 }

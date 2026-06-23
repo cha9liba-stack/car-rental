@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/components/layout/language-provider";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -30,6 +31,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { logAction } from "@/services/auditService";
 
 const clientSchema = z.object({
   name: z.string().min(2, "Le nom est requis"),
@@ -45,6 +47,7 @@ const clientSchema = z.object({
 type ClientForm = z.infer<typeof clientSchema>;
 
 export default function ClientsPage() {
+  const { t } = useLang();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,16 +89,18 @@ export default function ClientsPage() {
     try {
       if (editing) {
         await updateDocument(collections.clients, editing.id, data);
-        toast.success("Client mis à jour");
+        await logAction("update_client", "admin", editing.id, editing.name, "");
+        toast.success(t("client_updated"));
       } else {
-        await addToCollection(collections.clients, data);
-        toast.success("Client ajouté avec succès");
+        const newId = await addToCollection(collections.clients, data);
+        await logAction("create_client", "admin", newId, data.name, "");
+        toast.success(t("client_added"));
       }
       setModalOpen(false);
       setEditing(null);
       reset();
     } catch {
-      toast.error("Erreur lors de la sauvegarde");
+      toast.error(t("save_error"));
     }
   };
 
@@ -121,12 +126,14 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) {
+    if (confirm(t("confirm_delete_client"))) {
       try {
+        const deletedClient = clients.find((c) => c.id === id);
         await deleteDocument(collections.clients, id);
-        toast.success("Client supprimé");
+        await logAction("delete_client", "admin", id, deletedClient?.name || "", "");
+        toast.success(t("client_deleted"));
       } catch {
-        toast.error("Erreur lors de la suppression");
+        toast.error(t("delete_error"));
       }
     }
   };
@@ -134,7 +141,7 @@ export default function ClientsPage() {
   const columns = [
     {
       key: "name",
-      header: "Nom",
+      header: t("name"),
       render: (c: Client) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium shadow-sm">
@@ -149,7 +156,7 @@ export default function ClientsPage() {
     },
     {
       key: "phone",
-      header: "Téléphone",
+      header: t("phone"),
       render: (c: Client) => (
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <Phone size={14} className="text-gray-400" />
@@ -159,7 +166,7 @@ export default function ClientsPage() {
     },
     {
       key: "email",
-      header: "Email",
+      header: t("email"),
       render: (c: Client) =>
         c.email ? (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -172,7 +179,7 @@ export default function ClientsPage() {
     },
     {
       key: "cin",
-      header: "CIN",
+      header: t("cin"),
       render: (c: Client) => (
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <IdCard size={14} className="text-gray-400" />
@@ -182,7 +189,7 @@ export default function ClientsPage() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("actions"),
       render: (c: Client) => (
         <div className="flex items-center gap-2">
           <button
@@ -210,12 +217,12 @@ export default function ClientsPage() {
     >
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clients</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gestion des clients</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("clients_title")}</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">{t("clients_desc")}</p>
         </div>
         <Button onClick={openAdd}>
           <Plus size={18} />
-          Ajouter un client
+          {t("add_client")}
         </Button>
       </div>
 
@@ -227,7 +234,7 @@ export default function ClientsPage() {
           />
           <input
             type="text"
-            placeholder="Rechercher un client..."
+            placeholder={t("search_client")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -245,28 +252,28 @@ export default function ClientsPage() {
         <Table
           columns={columns}
           data={filtered}
-          emptyMessage="Aucun client trouvé"
+          emptyMessage={t("no_clients")}
         />
       )}
 
       <Modal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditing(null); }}
-        title={editing ? "Modifier le client" : "Ajouter un client"}
+        title={editing ? t("edit_client") : t("add_client")}
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="Nom complet" id="name" error={errors.name?.message} {...register("name")} />
-            <Input label="Téléphone" id="phone" error={errors.phone?.message} {...register("phone")} />
-            <Input label="Email" id="email" error={errors.email?.message} {...register("email")} />
-            <Input label="Adresse" id="address" {...register("address")} />
-            <Input label="CIN" id="cin" error={errors.cin?.message} {...register("cin")} />
-            <Input label="Date d'expiration CIN" id="cinExpiryDate" type="date" {...register("cinExpiryDate")} />
-            <Input label="Permis de conduire" id="driverLicense" {...register("driverLicense")} />
+            <Input label={t("full_name")} id="name" error={errors.name?.message} {...register("name")} />
+            <Input label={t("phone")} id="phone" error={errors.phone?.message} {...register("phone")} />
+            <Input label={t("email")} id="email" error={errors.email?.message} {...register("email")} />
+            <Input label={t("address")} id="address" {...register("address")} />
+            <Input label={t("cin")} id="cin" error={errors.cin?.message} {...register("cin")} />
+            <Input label={t("cin_expiry")} id="cinExpiryDate" type="date" {...register("cinExpiryDate")} />
+            <Input label={t("driver_license")} id="driverLicense" {...register("driverLicense")} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t("notes")}</label>
             <textarea
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               rows={3}
@@ -275,10 +282,10 @@ export default function ClientsPage() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => { setModalOpen(false); setEditing(null); }}>
-              Annuler
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Enregistrement..." : editing ? "Mettre à jour" : "Ajouter"}
+              {isSubmitting ? t("saving") : editing ? t("update") : t("add")}
             </Button>
           </div>
         </form>
